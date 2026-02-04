@@ -11,15 +11,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.981.0",
     "@vercel/kv": "^3.0.0",
     "axios": "^1.7.9",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
+    "dotenv": "^16.6.1",
     "ejs": "^3.1.10",
     "express": "^4.21.1",
     "express-session": "^1.18.1",
+    "multer": "^2.0.2",
+    "multer-s3": "^3.0.1",
     "mysql2": "^3.11.4"
   }
 }

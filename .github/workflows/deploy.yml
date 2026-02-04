@@ -1,0 +1,41 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 1. 빌드 단계 (예: Node.js 기준)
+      - name: Install dependencies & Build
+        run: |
+          cd backend  # 백엔드 폴더가 따로 있다면 이동
+          npm install
+          # npm run build (필요한 경우)
+
+      # 2. 서버로 파일 전송 (애플 소스 기준)
+      - name: Copy files to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}      # EC2 탄력적 IP
+          username: ${{ secrets.EC2_USER }} # 보통 ubuntu
+          key: ${{ secrets.EC2_KEY }}       # .pem 키 내용
+          source: "backend/*"                # 보낼 파일들
+          target: "/home/ubuntu/app"        # 서버 내 저장 위치
+
+      # 3. 서버에서 실행
+      - name: Execute remote commands
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            cd /home/ubuntu/app/backend
+            npm install --production
+            pm2 restart all || pm2 start index.js # PM2 같은 프로세스 매니저 사용 권장

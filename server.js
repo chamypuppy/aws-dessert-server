@@ -12,6 +12,7 @@ const cors = require('cors');
 const db = require("./config/db");
 const axios = require('axios');
 const session = require('express-session');
+const upload = require("./config/s3Config");
 
 
 /* 3. Express 애플리케이션 생성 */
@@ -198,6 +199,15 @@ app.get('/api/users/:USER_PK_ID', (req, res) => {
 
 
   });
+});
+
+// 리액트에서 보낸 'image'라는 필드명의 파일을 S3로 올림
+app.post("/upload", upload.single("image"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).send("파일 업로드 실패");
+  }
+  // S3에 저장된 파일의 주소를 리액트로 다시 알려줌
+  res.json({ imageUrl: req.file.location });
 });
 
 //app.use(router);
