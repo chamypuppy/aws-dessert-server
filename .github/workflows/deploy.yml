@@ -11,21 +11,38 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 1. 빌드 단계 (예: Node.js 기준)
+      # 1. 빌드 단계 (Node.js)
       - name: Install dependencies & Build
         run: |
           npm install
           # npm run build (필요한 경우)
+      # --- [보안 추가: SSH 문 열기] ---
+      - name: Get GitHub IP
+        id: ip
+        uses: haythem/public-ip@v1.3.0
+
+      - name: AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Add GitHub IP to Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+
+      # ---------------------------------
 
       # 2. 서버로 파일 전송
       - name: Copy files to EC2
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.EC2_HOST }}      # EC2 탄력적 IP
-          username: ${{ secrets.EC2_USER }} # 보통 ubuntu
+          host: ${{ secrets.EC2_HOST }}     # EC2 탄력적 IP
+          username: ${{ secrets.EC2_USER }} # ubuntu나 리눅스 ec2-user
           key: ${{ secrets.EC2_KEY }}       # .pem 키 내용
           source: "**/*,!node_modules/**"   # 보낼 파일들
-          target: "/home/ubuntu/app"        # 서버 내 저장 위치
+          target: "/home/ubuntu/aws-dessert-server"        # 서버 내 저장 위치
 
       # 3. 서버에서 실행
       - name: Execute remote commands
@@ -35,6 +52,12 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ubuntu/app/backend
+            cd /home/ubuntu/aws-dessert-server
             npm install --production
             pm2 restart all || pm2 start index.js # PM2 같은 프로세스 매니저 사용 권장
+
+      # --- [보안 추가: SSH 문 닫기] ---
+      - name: Remove GitHub IP from Security Group
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
