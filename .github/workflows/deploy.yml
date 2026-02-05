@@ -24,7 +24,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}      # EC2 탄력적 IP
           username: ${{ secrets.EC2_USER }} # 보통 ubuntu
           key: ${{ secrets.EC2_KEY }}       # .pem 키 내용
-          source: "backend/*"                # 보낼 파일들
+          source: "**/*,!node_modules/**"   # 보낼 파일들
           target: "/home/ubuntu/app"        # 서버 내 저장 위치
 
       # 3. 서버에서 실행
