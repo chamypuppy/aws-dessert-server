@@ -48,6 +48,7 @@ jobs:
           source: "**/*,!node_modules/**"   # 보낼 파일들
           target: "/home/ubuntu/aws-dessert-server"        # 서버 내 저장 위치
 
+
       # 3. 서버에서 실행
       - name: Execute remote commands
         uses: appleboy/ssh-action@master
@@ -65,3 +66,4 @@ jobs:
         if: always()                              # 배포가 성공하든 실패하든 무조건 실행해서 문을 닫아야 함!
         run: |
           aws ec2 revoke-security-group-ingress --group-id ${{ secrets.AWS_SG_ID }} --protocol tcp --port 22 --cidr ${{ steps.ip.outputs.ipv4 }}/32
+

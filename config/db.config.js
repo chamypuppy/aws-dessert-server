@@ -1,4 +1,4 @@
-require('dotenv').config(); // .env 파일 로드
+require('dotenv').config({ path: __dirname + '/.env' }); // .env 파일 로드
 
 const dbConfig = {
   host: process.env.DB_HOST,       // 환경 변수에서 DB_HOST 가져오기

@@ -1,7 +1,7 @@
 /* 1. 환경 변수 설정 */
 require('dotenv').config({ path: '../.env' }); // 루트 디렉토리의 .env 파일 로드
 
-console.log('front ORIGIN:', process.env.CLOUDTYPE_FRONTEND_URL);
+console.log('front ORIGIN:', process.env.REACT_APP_CLIENT_URL);
 
 /* 2. 필요 모듈 불러오기 */
 const express = require('express');
@@ -35,7 +35,8 @@ app.use(session({
 /* 5. CORS 미들웨어 설정 */
 //app.use(cors());
 app.use(cors({
-  origin: process.env.CLOUDTYPE_FRONTEND_URL,
+  // origin: process.env.CLOUDTYPE_FRONTEND_URL,
+  origin: process.env.REACT_APP_CLIENT_URL,
   credentials: true, // 인증 정보 허용 = 요청에 쿠키 포함
 }));
 
