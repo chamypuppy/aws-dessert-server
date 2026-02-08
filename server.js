@@ -1,5 +1,5 @@
 /* 1. 환경 변수 설정 */
-require('dotenv').config({ path: '../.env' }); // 루트 디렉토리의 .env 파일 로드
+require('dotenv').config({ path: './.env' });
 
 console.log('front ORIGIN:', process.env.REACT_APP_CLIENT_URL);
 
