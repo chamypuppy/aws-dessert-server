@@ -58,6 +58,12 @@ jobs:
           key: ${{ secrets.EC2_KEY }}
           script: |
             cd /home/ubuntu/aws-dessert-server
+
+            echo "DB_HOST=${{ secrets.DB_HOST }}" > .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "PORT=5000" >> .env
+            
             npm install --production
             pm2 restart all || pm2 start index.js # PM2 같은 프로세스 매니저 사용 권장
 
