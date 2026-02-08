@@ -67,7 +67,8 @@ jobs:
             echo "PORT=5000" >> .env
 
             npm install --production
-            pm2 restart all || pm2 start index.js # PM2 같은 프로세스 매니저 사용 권장
+            pm2 delete all || true
+            pm2 start server.js -- name "ubuntu-dessert-server"
 
       # --- [보안 추가: SSH 문 닫기] ---
       - name: Remove GitHub IP from Security Group
