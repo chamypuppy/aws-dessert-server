@@ -1,5 +1,7 @@
 /* 1. 환경 변수 설정 */
-require('dotenv').config({ path: './.env' });
+// require('dotenv').config({ path: './.env' });
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 console.log('front ORIGIN:', process.env.REACT_APP_CLIENT_URL);
 
