@@ -80,7 +80,7 @@ router
           SESSION = req.session;
           SESSION.USER_PK_ID = results[0].users_pk_id;  // 세션에 값 저장
           SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-          return res.redirect(`${process.env.}/`);
+          return res.redirect(`${process.env.REACT_APP_CLIENT_URL}/`);
         } else {
           const newInsertUser = `INSERT INTO users(users_kakao_id, nickname) VALUES (?, ?)`;
           db.query(newInsertUser, [kakaoId, nickname], (err, results) => {
