@@ -80,7 +80,7 @@ router
           SESSION = req.session;
           SESSION.USER_PK_ID = results[0].users_pk_id;  // 세션에 값 저장
           SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-          return res.redirect(`${process.env.CLOUDTYPE_FRONTEND_URL}/`);
+          return res.redirect(`${process.env.}/`);
         } else {
           const newInsertUser = `INSERT INTO users(users_kakao_id, nickname) VALUES (?, ?)`;
           db.query(newInsertUser, [kakaoId, nickname], (err, results) => {
@@ -93,7 +93,7 @@ router
             SESSION.USER_PK_ID = results.insertId;
             // SESSION.LOGIN_TYPE = 'kakao';
             SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-            res.redirect(`${process.env.CLOUDTYPE_FRONTEND_URL}/users/research`);
+            res.redirect(`${process.env.REACT_APP_CLIENT_URL}/users/research`);
           });
         };
       });
