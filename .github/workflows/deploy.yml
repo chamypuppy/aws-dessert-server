@@ -71,6 +71,7 @@ jobs:
             echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
             echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> .env
             echo "KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}" >> .env
+            echo "IS_AWS=true" >> .env
 
             npm install --production
             pm2 delete all || true

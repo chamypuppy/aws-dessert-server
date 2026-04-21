@@ -22,16 +22,19 @@ const app = express();
 const port = process.env.PORT || 5000; // 백엔드 서버 포트, React와 통신
 
 /* 4. 세션 미들웨어 설정 */
+const isAWS = process.env.IS_AWS === 'true';
+
 app.use(session({
-  secret: process.env.SESSION_SECRET, // 비밀 키
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: false, 
-    httpOnly: true, // 클라이언트에서 쿠키 접근 방지
-    /* sameSite: 'lax', */ // 또는 'none' (배포 시 'none' + secure: true)
-    maxAge: 1000 * 60 * 60 * 3 }, // 개발 환경에서는 false, 배포 시에는 true로 변경
-    name: 'KAKAO_SESSION'
+    secure: isAWS,                        // AWS(HTTPS)면 true, 로컬이면 false
+    httpOnly: true,
+    sameSite: isAWS ? 'none' : 'lax',    // AWS면 크로스사이트 허용, 로컬이면 lax
+    maxAge: 1000 * 60 * 60 * 3
+  },
+  name: 'KAKAO_SESSION'
 }));
 
 /* 5. CORS 미들웨어 설정 */
