@@ -78,9 +78,9 @@ router
         const DBsameData = 0;
         if(results.length > DBsameData) {
           SESSION = req.session;
-          SESSION.USER_PK_ID = results[0].users_pk_id;  // 세션에 값 저장
+          SESSION.USER_PK_ID = results[0].users_pk_id;
           SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-          return res.redirect(`${process.env.REACT_APP_CLIENT_URL}/`);
+          return SESSION.save(() => res.redirect(`${process.env.REACT_APP_CLIENT_URL}/`));
         } else {
           const newInsertUser = `INSERT INTO users(users_kakao_id, nickname) VALUES (?, ?)`;
           db.query(newInsertUser, [kakaoId, nickname], (err, results) => {
@@ -91,9 +91,8 @@ router
             console.log("☀ 카카오 신규 유저 가입 성공");
             SESSION = req.session;
             SESSION.USER_PK_ID = results.insertId;
-            // SESSION.LOGIN_TYPE = 'kakao';
             SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-            res.redirect(`${process.env.REACT_APP_CLIENT_URL}/users/research`);
+            return SESSION.save(() => res.redirect(`${process.env.REACT_APP_CLIENT_URL}/users/research`));
           });
         };
       });
