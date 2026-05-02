@@ -1,11 +1,11 @@
-/* 1. 환경 변수 설정 */
+/* 0. 환경변수 설정 */
 // require('dotenv').config({ path: './.env' });
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 console.log('front ORIGIN:', process.env.REACT_APP_CLIENT_URL);
 
-/* 2. 필요 모듈 불러오기 */
+/* 0. 모듈 설정 */
 const express = require('express');
 const router = express.Router();
 const cors = require('cors');
@@ -14,30 +14,38 @@ const cors = require('cors');
 const db = require("./config/db");
 const axios = require('axios');
 const session = require('express-session');
-const upload = require("./config/s3Config");
+const RedisStore = require('connect-redis').default;
+const Redis = require('ioredis');
 
 
-/* 3. Express 애플리케이션 생성 */
+/* 0. express 설정 */
 const app = express();
-const port = process.env.PORT || 5000; // 백엔드 서버 포트, React와 통신
+const port = process.env.PORT || 5000;
 
-/* 4. 세션 미들웨어 설정 */
+/* 0. 세션 미들웨어 설정 */
 const isAWS = process.env.IS_AWS === 'true';
+if (isAWS) app.set('trust proxy', 1);
+
+const redisClient = new Redis({
+  host: process.env.REDIS_HOST || '127.0.0.1',
+  port: 6379,
+});
 
 app.use(session({
+  store: new RedisStore({ client: redisClient }),
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
   cookie: {
-    secure: isAWS,                        // AWS(HTTPS)면 true, 로컬이면 false
+    secure: isAWS,
     httpOnly: true,
-    sameSite: isAWS ? 'none' : 'lax',    // AWS면 크로스사이트 허용, 로컬이면 lax
+    sameSite: isAWS ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 3
   },
   name: 'KAKAO_SESSION'
 }));
 
-/* 5. CORS 미들웨어 설정 */
+/* 0. cors 미들웨어 설정 */
 //app.use(cors());
 app.use(cors({
   // origin: process.env.CLOUDTYPE_FRONTEND_URL,
@@ -45,23 +53,6 @@ app.use(cors({
   credentials: true, // 인증 정보 허용 = 요청에 쿠키 포함
 }));
 
-
-
-
-/* 레시피 목록 불러오기 */
-/*
-app.get('/api/recipe', (req, res) => {
-  const query = 'SELECT * FROM recipe';
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send('서버 오류');
-    } else {
-      res.json(results);
-    }
-  });
-});
-*/
 
 /* 저장된 세션(userPkId)을 반환하는 API */
 app.get('/api/users/session', (req, res) => {
@@ -81,38 +72,6 @@ app.get('/api/users/session', (req, res) => {
     });
   }
 });
-
-
-
-
-
-/* ✅ 레시피 검색 기능 */
-/* app.get('/api/recipes/search', (req, res) => {
-  const keyword = req.query.keyword;
-  const query = `SELECT 
-        r.recipe_pk_id,
-        r.recipe_name, 
-        r.recipe_image,
-        r.scrap_count, 
-        u.nickname AS author_name
-      FROM recipe r
-      LEFT JOIN users u ON r.author_id = u.users_pk_id
-      WHERE recipe_name LIKE ?;`
-
-  const param = `%${keyword}%`;
-
-  db.query(query, [param], (err, results) => {
-    if(err) {
-      console.error('💦recipe search API의 DB query에 에러가 발생했습니다!: \n', err);
-      res.status(500).send('recipes search API 오류');
-    } else {
-      res.json(results);
-      console.log('받은 API 확인:', results);
-      console.log('받은 req.query:', JSON.stringify(req.query));
-    }
-  })
-}) */
-
 
 
 /* ✅ DetailPage에 users_intro 가져오기 */
@@ -207,16 +166,6 @@ app.get('/api/users/:USER_PK_ID', (req, res) => {
   });
 });
 
-// 리액트에서 보낸 'image'라는 필드명의 파일을 S3로 올림
-app.post("/upload", upload.single("image"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).send("파일 업로드 실패");
-  }
-  // S3에 저장된 파일의 주소를 리액트로 다시 알려줌
-  res.json({ imageUrl: req.file.location });
-});
-
-//app.use(router);
 
   // 서버 시작
 app.listen(port, () => {
