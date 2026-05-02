@@ -14,7 +14,7 @@ const cors = require('cors');
 const db = require("./config/db");
 const axios = require('axios');
 const session = require('express-session');
-const RedisStore = require('connect-redis').default;
+const { RedisStore } = require('connect-redis');
 const Redis = require('ioredis');
 
 
