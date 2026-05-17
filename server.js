@@ -14,7 +14,7 @@ const cors = require('cors');
 const db = require("./config/db");
 const axios = require('axios');
 const session = require('express-session');
-const { RedisStore } = require('connect-redis');
+const RedisStore = require('connect-redis')(session);
 const Redis = require('ioredis');
 
 
@@ -31,15 +31,18 @@ const redisClient = new Redis({
   port: 6379,
 });
 
+redisClient.on('connect', () => console.log('✅ Redis 연결 성공'));
+redisClient.on('error', (err) => console.error('🔴 Redis 에러:', err));
+
 app.use(session({
-  store: new RedisStore({ client: redisClient }),
+  store: new RedisStore({ client: redisClient, disableTouch: true }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: isAWS,
     httpOnly: true,
-    sameSite: isAWS ? 'none' : 'lax',
+    sameSite: isAWS ? 'none' : false,  // 로컬: SameSite 속성 제거 (크로스 포트 허용)
     maxAge: 1000 * 60 * 60 * 3
   },
   name: 'KAKAO_SESSION'
@@ -56,7 +59,7 @@ app.use(cors({
 
 /* 저장된 세션(userPkId)을 반환하는 API */
 app.get('/api/users/session', (req, res) => {
-  console.log("session:", req.session.USER_PK_ID);
+  console.log("session ID:", req.sessionID, "| USER_PK_ID:", req.session.USER_PK_ID);
 
   if (req.session.USER_PK_ID) {
     res.status(200).json({ 

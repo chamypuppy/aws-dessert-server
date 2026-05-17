@@ -77,22 +77,30 @@ router
 
         const DBsameData = 0;
         if(results.length > DBsameData) {
-          SESSION = req.session;
-          SESSION.USER_PK_ID = results[0].users_pk_id;
-          SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-          return SESSION.save(() => res.redirect(`${process.env.REACT_APP_CLIENT_URL}/`));
+          req.session.USER_PK_ID = results[0].users_pk_id;
+          req.session.ACCESS_TOKEN = ACCESS_TOKEN;
+          return req.session.save((err) => {
+            if (err) console.error("🟡 기존 유저 세션 저장 실패:", err);
+            else console.log("☀ 기존 유저 세션 저장 성공, ID:", req.sessionID, "USER_PK_ID:", req.session.USER_PK_ID);
+            res.redirect(`${process.env.REACT_APP_CLIENT_URL}/`);
+          });
         } else {
-          const newInsertUser = `INSERT INTO users(users_kakao_id, nickname) VALUES (?, ?)`;
-          db.query(newInsertUser, [kakaoId, nickname], (err, results) => {
+          const users_name = userInfo?.kakao_account?.name || nickname;
+          const newInsertUser = `INSERT INTO users(users_kakao_id, nickname, users_img, users_name) VALUES (?, ?, ?, ?)`;
+          db.query(newInsertUser, [kakaoId, nickname, users_img, users_name], (err, results) => {
             if(err) {
-              console.error("🟡 카카오 신규 유저 가입 오류입니다.");
+              console.error("🟡 카카오 신규 유저 가입 오류입니다. SQL 에러:", err.message);
+              console.error("🟡 SQL 상세:", err);
               return res.status(500).send("🟡 카카오 신규 유저 가입 오류");
             }
             console.log("☀ 카카오 신규 유저 가입 성공");
-            SESSION = req.session;
-            SESSION.USER_PK_ID = results.insertId;
-            SESSION.ACCESS_TOKEN = ACCESS_TOKEN;
-            return SESSION.save(() => res.redirect(`${process.env.REACT_APP_CLIENT_URL}/users/research`));
+            req.session.USER_PK_ID = results.insertId;
+            req.session.ACCESS_TOKEN = ACCESS_TOKEN;
+            return req.session.save((err) => {
+              if (err) console.error("🟡 신규 유저 세션 저장 실패:", err);
+              else console.log("☀ 신규 유저 세션 저장 성공, ID:", req.sessionID, "USER_PK_ID:", req.session.USER_PK_ID);
+              res.redirect(`${process.env.REACT_APP_CLIENT_URL}/users/research`);
+            });
           });
         };
       });

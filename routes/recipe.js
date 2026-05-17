@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
+const upload = require("../config/s3Config");
 
 /* 레시피 방법 불러오기 + recipe와 recipe_method 테이블의 공통된 recipe_pk_id랑 매칭되어야 함 */
 /* router
@@ -185,27 +186,159 @@ router
       }
     });
   })
-  .put((req, res) => { /* UPDATE recipe 세미콜론 x */ }) 
-  .post((req, res) => { /* INSERT recipe */
-    const { recipe_name, recipe_intro, recipe_servings, baking_level } = req.body;
-    const query = `INSERT INTO recipe (
-      recipe_name, recipe_intro, recipe_image, recipe_servings, 
-      baking_level, author_id, category_big, category_middle, 
-      category_machine, ingredient1, ingredient2, tips, tags
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    db.query(query, [recipe_name, recipe_intro, recipe_image, recipe_servings, 
-      baking_level, author_id, category_big, category_middle, 
-      category_machine, ingredient1, ingredient2, tips, tags], (err, results) => {
-      if (err) {
-        console.error('💦add_recipe API 처리 시 에러가 발생하였습니다!: \n', err);
-        res.status(500).send('레시피 추가에 실패: add_recipe API 오류');
-      } else {
-        res.status(201).send('레시피가 추가되었습니다.');
-      }
-    });
-  })
-  .delete((req, res) => { /* DELETE recipe 세미콜론 x */})
+  .put((req, res) => { res.status(405).json({ message: '이 경로는 지원하지 않습니다. /api/recipe/:id 를 사용하세요.' }); })
+  .post((req, res) => { res.status(405).json({ message: '이 경로는 지원하지 않습니다. /api/recipe/add 를 사용하세요.' }); })
+  .delete((req, res) => { res.status(405).json({ message: '이 경로는 지원하지 않습니다. /api/recipe/:id 를 사용하세요.' }); });
 
+
+/* ✅ INSERT - 레시피 등록 */
+router.post('/add', upload.single('image'), (req, res) => {
+  if (!req.session.USER_PK_ID) {
+    return res.status(401).json({ message: '로그인이 필요합니다.' });
+  }
+
+  const {
+    recipe_name, recipe_intro, recipe_servings, baking_level,
+    category_big, category_middle, category_machine,
+    ingredient1, ingredient2, tips, tags, steps
+  } = req.body;
+
+  const recipe_image = req.file ? req.file.location : null;
+  const author_id = req.session.USER_PK_ID;
+  const parsedSteps = steps ? JSON.parse(steps) : [];
+
+  const insertRecipeQuery = `
+    INSERT INTO recipe (
+      recipe_name, recipe_intro, recipe_image, recipe_servings,
+      baking_level, author_id, category_big, category_middle,
+      category_machine, ingredient1, ingredient2, tips, tags
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(insertRecipeQuery, [
+    recipe_name, recipe_intro, recipe_image, recipe_servings,
+    baking_level, author_id, category_big, category_middle,
+    category_machine, ingredient1, ingredient2, tips, tags
+  ], (err, result) => {
+    if (err) {
+      console.error('💦 레시피 등록 오류:', err);
+      return res.status(500).json({ message: '레시피 등록에 실패했습니다.' });
+    }
+
+    const recipe_pk_id = result.insertId;
+
+    if (parsedSteps.length === 0) {
+      return res.status(201).json({ message: '레시피가 등록되었습니다.', recipe_pk_id });
+    }
+
+    const methodValues = parsedSteps.map((method, index) => [recipe_pk_id, method, index + 1]);
+    db.query('INSERT INTO recipe_method (recipe_pk_id, method, method_number) VALUES ?', [methodValues], (err) => {
+      if (err) {
+        console.error('💦 레시피 방법 등록 오류:', err);
+        return res.status(500).json({ message: '레시피 방법 등록에 실패했습니다.' });
+      }
+      res.status(201).json({ message: '레시피가 등록되었습니다.', recipe_pk_id });
+    });
+  });
+});
+
+
+/* ✅ UPDATE - 레시피 수정 */
+router.put('/:recipe_pk_id', upload.single('image'), (req, res) => {
+  if (!req.session.USER_PK_ID) {
+    return res.status(401).json({ message: '로그인이 필요합니다.' });
+  }
+
+  const { recipe_pk_id } = req.params;
+  const {
+    recipe_name, recipe_intro, recipe_servings, baking_level,
+    category_big, category_middle, category_machine,
+    ingredient1, ingredient2, tips, tags, steps
+  } = req.body;
+
+  const parsedSteps = steps ? JSON.parse(steps) : [];
+  const newImage = req.file ? req.file.location : null;
+
+  const updateQuery = newImage
+    ? `UPDATE recipe SET recipe_name=?, recipe_intro=?, recipe_image=?, recipe_servings=?,
+        baking_level=?, category_big=?, category_middle=?, category_machine=?,
+        ingredient1=?, ingredient2=?, tips=?, tags=?
+       WHERE recipe_pk_id=? AND author_id=?`
+    : `UPDATE recipe SET recipe_name=?, recipe_intro=?, recipe_servings=?,
+        baking_level=?, category_big=?, category_middle=?, category_machine=?,
+        ingredient1=?, ingredient2=?, tips=?, tags=?
+       WHERE recipe_pk_id=? AND author_id=?`;
+
+  const updateParams = newImage
+    ? [recipe_name, recipe_intro, newImage, recipe_servings, baking_level,
+       category_big, category_middle, category_machine, ingredient1, ingredient2,
+       tips, tags, recipe_pk_id, req.session.USER_PK_ID]
+    : [recipe_name, recipe_intro, recipe_servings, baking_level,
+       category_big, category_middle, category_machine, ingredient1, ingredient2,
+       tips, tags, recipe_pk_id, req.session.USER_PK_ID];
+
+  db.query(updateQuery, updateParams, (err, result) => {
+    if (err) {
+      console.error('💦 레시피 수정 오류:', err);
+      return res.status(500).json({ message: '레시피 수정에 실패했습니다.' });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(403).json({ message: '수정 권한이 없거나 레시피가 없습니다.' });
+    }
+
+    db.query('DELETE FROM recipe_method WHERE recipe_pk_id = ?', [recipe_pk_id], (err) => {
+      if (err) {
+        console.error('💦 레시피 방법 삭제 오류:', err);
+        return res.status(500).json({ message: '레시피 방법 업데이트에 실패했습니다.' });
+      }
+
+      if (parsedSteps.length === 0) {
+        return res.status(200).json({ message: '레시피가 수정되었습니다.', recipe_pk_id });
+      }
+
+      const methodValues = parsedSteps.map((method, index) => [recipe_pk_id, method, index + 1]);
+      db.query('INSERT INTO recipe_method (recipe_pk_id, method, method_number) VALUES ?', [methodValues], (err) => {
+        if (err) {
+          console.error('💦 레시피 방법 재등록 오류:', err);
+          return res.status(500).json({ message: '레시피 방법 재등록에 실패했습니다.' });
+        }
+        res.status(200).json({ message: '레시피가 수정되었습니다.', recipe_pk_id });
+      });
+    });
+  });
+});
+
+
+/* ✅ DELETE - 레시피 삭제 */
+router.delete('/:recipe_pk_id', (req, res) => {
+  if (!req.session.USER_PK_ID) {
+    return res.status(401).json({ message: '로그인이 필요합니다.' });
+  }
+
+  const { recipe_pk_id } = req.params;
+
+  db.query('DELETE FROM recipe_method WHERE recipe_pk_id = ?', [recipe_pk_id], (err) => {
+    if (err) {
+      console.error('💦 recipe_method 삭제 오류:', err);
+      return res.status(500).json({ message: '삭제에 실패했습니다.' });
+    }
+
+    db.query(
+      'DELETE FROM recipe WHERE recipe_pk_id = ? AND author_id = ?',
+      [recipe_pk_id, req.session.USER_PK_ID],
+      (err, result) => {
+        if (err) {
+          console.error('💦 레시피 삭제 오류:', err);
+          return res.status(500).json({ message: '삭제에 실패했습니다.' });
+        }
+        if (result.affectedRows === 0) {
+          return res.status(403).json({ message: '삭제 권한이 없거나 레시피가 없습니다.' });
+        }
+        res.status(200).json({ message: '레시피가 삭제되었습니다.' });
+      }
+    );
+  });
+});
 
 
 module.exports = router;
